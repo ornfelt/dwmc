@@ -3,8 +3,8 @@
 Maintained by the `dwmc-port` skill. A hint for the next run, not the source of truth - the
 trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include='*.[ch]'`
 
-**Last run:** vanitygaps.c, man page, README, functional tests, `~/.config/dwmc/config.h` (groups 9-10) - dwmc is complete
-**Next:** dwmblocksc (group 11), in one run
+**Last run:** dwmblocksc (group 11) - both ports are complete
+**Next:** nothing left to port; `review dwmc` / `review dwmblocksc`
 
 ## Porting order
 
@@ -18,7 +18,7 @@ trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include
 - [x] 8. dwm.c, second half - `manage` .. `zoom`, then `main()`
 - [x] 9. vanitygaps - `vanitygaps.c`
 - [x] 10. man page (`dwmc.1`), README, tests, functional test, `~/.config/dwmc/config.h`
-- [ ] 11. dwmblocksc
+- [x] 11. dwmblocksc - `dwmblocksc.c`, `blocks.def.h`, `config/blocks.h`, `dwmblocksc.1`, README, `test.c`, functional test, `~/.config/dwmblocksc/blocks.h`
 
 The gcc/clang builds warn only about `quit` being unused with
 config/config.h (and so with `~/.config/dwmc/config.h`, a copy of it), which
@@ -86,6 +86,32 @@ their `arg` everywhere, and dwm builds without -Wextra.
   `togglebgaps()` flips (dwmr copies it into a field since its config is
   immutable), and `enablegaps` (vanitygaps.c).
 
+## dwmblocksc decisions
+
+- **No allocation for the blocks**: the selected blocks (`selblocks[]`,
+  `nblocks`), `statusbar`, `blockcmds`, `statusstr` and the poll arrays are
+  static arrays sized `LENGTH(blocks)`, the most `selectblocks()` can pick,
+  as dwmblocks.c sizes them. Nothing to free on exit. The one allocation is
+  a click's `envp` (dwmblocksr allocates there too), freed after the
+  waitpid.
+- **parse()'s checks are startup checks**, not compile-time ones:
+  `blocks[]` members and `delimLen` are not constant expressions in C (and
+  `delimLen` must stay a variable, main() cuts it), and SIGRTMAX is a libc
+  call. main() checks delimLen, every icon and every signal before anything
+  runs, with dwmblocksr's messages, and exits 1. setblockstatus() keeps
+  dwmblocksr's bounds as well, so it is safe for any value.
+- **Block.battery** is `AnyBattery` (0, so blocks.h may leave it out),
+  `HasBattery` or `NoBattery`; `-Wno-missing-field-initializers` in
+  config.mk for the 4-field entries.
+- **ASYNC**: `#ifndef ASYNC / #define ASYNC 1` in blocks.h (and a fallback
+  in dwmblocksc.c for a blocks.h without it), so `-DASYNC=0` builds the
+  other variant. The sync getcmd() is dwmblocks.c's popen/fgets/pclose;
+  dwmblocksr's startcmd() read loop is its Rust replacement.
+- **SIGRTMIN** is read once into `sigplus` (dwmblocksr's SIGPLUS) for the
+  signal handler. getcmd/readcmd skip `i >= nblocks` like dwmblocksr's
+  `.get()`. statusloop's counter is unsigned (dwmblocksr's wrapping_add).
+- Dropped: NO_X and the OpenBSD paths (dwmblocksr has neither).
+
 ## Known analyzer report
 
 `scan-build` reports one "use of memory after it is freed" at `cleanup()`'s
@@ -137,6 +163,17 @@ in updategeom/cleanupmon) do not occur in dwmc.
 - `dwmc` on the live display: "dwmc: another window manager is already
   running", exit 1; `-v` and usage as dwmr's (exit 1).
 
+- dwmblocksc on Xvfb against dwmblocksr (8 test blocks: interval,
+  click with BLOCK_BUTTON, a 96-byte output cut before a 2-byte glyph, an
+  icon-only block, a 2 s command on a 3 s interval, a battery pair, a
+  signalled counter; delim " | "): the root name byte for byte identical at
+  every step (start, update signals, clicks with buttons 3/1/2, three
+  signals in a row) in async and sync mode; `-p` and `-p -d ::` output
+  identical; no zombies; SIGTERM exits 0 with an empty root name; no
+  ASan/UBSan/LSan report (`make debug`). Startup checks (signal 31, a
+  98-byte icon, delimLen 98), `-v` and no display: dwmblocksr's messages
+  and exit 1.
+
 ## Run log
 
 | Run | Files | ~C lines | Build | Tests |
@@ -144,3 +181,4 @@ in updategeom/cleanupmon) do not occur in dwmc.
 | 1 | setup, util.c/h, drw.c/h, transient.c, dwm.c + vanitygaps.c skeleton, config.def.h, config/config.h, test.c | 2750 (900 of them stubs) | gcc, clang, no-Xinerama, both configs: only stub warnings; scan-build clean | make test (util, drw) passes under ASan+UBSan |
 | 2 | dwm.c: all functions and main() | 2000 | gcc, clang, no-Xinerama, both configs: only vanitygaps-stub warnings (+ `quit` with config/config.h); scan-build: the one report stock dwm has too | make test passes; no functional test yet (layouts are stubs) |
 | 3 | vanitygaps.c, dwmc.1, README, tools/lsan.supp, `~/.config/dwmc/config.h` | 470 + 400 man | gcc, clang, no-Xinerama, both configs: only `quit` unused (config/config.h); scan-build: the known report | make test passes; functional tests A and B pass (Xvfb) |
+| 4 | dwmblocksc: dwmblocksc.c, blocks.def.h, config/blocks.h, dwmblocksc.1, README, test.c, Makefile | 560 + 265 tests/config | gcc, clang, ASYNC 0/1, both configs: warning-free; scan-build clean | make test (both configs x ASYNC 0/1) passes; functional test vs dwmblocksr passes |
