@@ -3,8 +3,8 @@
 Maintained by the `dwmc-port` skill. A hint for the next run, not the source of truth - the
 trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include='*.[ch]'`
 
-**Last run:** setup, util, drw, transient, config + dwm.c skeleton (groups 1-6)
-**Next:** implement dwm.c, first half (Dwm::applyrules .. Dwm::manage)
+**Last run:** dwm.c, both halves (groups 7-8): every dwm.c function and main()
+**Next:** vanitygaps.c (group 9), then group 10
 
 ## Porting order
 
@@ -14,14 +14,18 @@ trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include
 - [x] 4. transient - `transient.c`
 - [x] 5. config - types in dwm.c, `config.def.h`, `config/config.h` (both verified against dwmr, see below)
 - [x] 6. dwm.c skeleton - every function a stub, `vanitygaps.c` stubbed too (config.h needs its layouts)
-- [ ] 7. dwm.c, first half - `applyrules` .. `manage`
-- [ ] 8. dwm.c, second half - `manage` .. `zoom`, then `main()`
+- [x] 7. dwm.c, first half - `applyrules` .. `manage`
+- [x] 8. dwm.c, second half - `manage` .. `zoom`, then `main()`
 - [ ] 9. vanitygaps - fill the `vanitygaps.c` stubs
 - [ ] 10. man page, README, tests, functional test, `~/.config/dwmc/config.h`
 - [ ] 11. dwmblocksc
 
-While stubs remain, the build warns only about them (unused parameters, and
-functions/variables only the stubs would use); every other warning is a bug.
+While the vanitygaps.c stubs remain, the build warns only about them
+(`fibonacci`, `getfacts`, `getgaps`, `setgaps`, `enablegaps`, `browsergaps`);
+every other warning is a bug, except `quit` unused with config/config.h,
+which has no quit binding (dwmr's shipped config neither: the powermenu
+exits). `-Wno-unused-parameter` is in config.mk: dwm's handlers ignore their
+`arg` everywhere, and dwm builds without -Wextra.
 
 ## Decisions the remaining groups must follow
 
@@ -71,6 +75,31 @@ functions/variables only the stubs would use); every other warning is a bug.
   stays "dwm"; messages say "dwmc:"; `updatestatus()`'s default text is
   "dwmc-" VERSION.
 
+- **vanitygaps** reads `browsergaps` (config.h) as its runtime state, which
+  `togglebgaps()` flips (dwmr copies it into a field since its config is
+  immutable), and `enablegaps` (vanitygaps.c).
+
+## Known analyzer report
+
+`scan-build` reports one "use of memory after it is freed" at `cleanup()`'s
+`unmanage(m->stack, 0)`: the analyzer cannot know that every client in
+`m->stack` has `c->mon == m`. Stock dwm 6.8 gets the same report at the same
+line (checked); its other three reports (division by zero in tile, NULL `m`
+in updategeom/cleanupmon) do not occur in dwmc.
+
+## Rust issues found (ported faithfully or noted, not fixed in dwmr)
+
+- `pushstack()`: with a plain index past the last visible client whose last
+  client is sel, the walk ends on sel and sel is linked after itself (dropped
+  from the client list). The comment says it is a no-op; it is not.
+  Unreachable with the shipped keys (INC(), 0, -1). Ported as is.
+- `unmanage()`: when a swallowed terminal's window is mapped again and
+  managed as a second client, unmanaging that client frees the listed client
+  (`free_client(c)`) instead of the swallowed one. dwmc frees
+  `s->swallowing`, as the swallow patch does; identical in every other case.
+- `gettextprop()`: an empty property's value is not XFree'd (dwm has the same
+  leak); dwmc frees it.
+
 ## Verification record
 
 - config/config.h and config.def.h were compared with dwmr by dumping both
@@ -85,3 +114,4 @@ functions/variables only the stubs would use); every other warning is a bug.
 | Run | Files | ~C lines | Build | Tests |
 | --- | --- | --- | --- | --- |
 | 1 | setup, util.c/h, drw.c/h, transient.c, dwm.c + vanitygaps.c skeleton, config.def.h, config/config.h, test.c | 2750 (900 of them stubs) | gcc, clang, no-Xinerama, both configs: only stub warnings; scan-build clean | make test (util, drw) passes under ASan+UBSan |
+| 2 | dwm.c: all functions and main() | 2000 | gcc, clang, no-Xinerama, both configs: only vanitygaps-stub warnings (+ `quit` with config/config.h); scan-build: the one report stock dwm has too | make test passes; no functional test yet (layouts are stubs) |
