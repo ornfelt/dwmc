@@ -1,0 +1,8 @@
+# LeakSanitizer suppressions for dwmc-debug: leaks entirely inside the X
+# libraries. Never suppress a frame of dwmc itself.
+#
+# fontconfig's global configuration, which XftInit() loads on the first
+# XftFontMatch() and nothing frees (dwm does not call FcFini() either). The
+# frame is only seen with full unwinding: run with
+# ASAN_OPTIONS=fast_unwind_on_malloc=0.
+leak:FcInitLoadConfigAndFonts

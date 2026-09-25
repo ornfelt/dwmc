@@ -326,6 +326,7 @@ static void deck(Monitor *m);
 static void defaultgaps(const Arg *arg);
 static void dwindle(Monitor *m);
 static void fibonacci(Monitor *m, int s);
+static int ftoi(float f);
 static void getfacts(Monitor *m, int msize, int ssize, int *mf, int *sf, int *mr, int *sr);
 static void getgaps(Monitor *m, int *oh, int *ov, int *ih, int *iv, int *nc);
 static void incrgaps(const Arg *arg);

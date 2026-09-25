@@ -9,8 +9,6 @@ floating layouts, the same tags, bar, key and mouse bindings, plus the
 gap-aware tiled layouts of dwm's vanitygaps patch. Unlike dwmr, and like dwm,
 it is configured through a `config.h` that is compiled in.
 
-**Work in progress**: the port is not finished yet, see `PORT_STATUS.md`.
-
 ## Requirements
 
 - A C99 compiler and make
@@ -200,7 +198,10 @@ Xinerama support is `XINERAMAFLAGS` in `config.mk`, like dwm:
 `make test` runs the unit tests under AddressSanitizer and
 UndefinedBehaviorSanitizer and builds dwm.c against both `config.def.h` and
 `config/config.h`. `make debug` builds `dwmc-debug`, dwmc with the same
-sanitizers.
+sanitizers. Run it with
+`ASAN_OPTIONS=fast_unwind_on_malloc=0 LSAN_OPTIONS=suppressions=tools/lsan.supp`:
+`tools/lsan.supp` suppresses fontconfig's own configuration, which nothing
+frees, and nothing of dwmc.
 
 `dwmc.png` is drawn by `tools/logo.py`.
 

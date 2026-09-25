@@ -3,8 +3,8 @@
 Maintained by the `dwmc-port` skill. A hint for the next run, not the source of truth - the
 trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include='*.[ch]'`
 
-**Last run:** dwm.c, both halves (groups 7-8): every dwm.c function and main()
-**Next:** vanitygaps.c (group 9), then group 10
+**Last run:** vanitygaps.c, man page, README, functional tests, `~/.config/dwmc/config.h` (groups 9-10) - dwmc is complete
+**Next:** dwmblocksc (group 11), in one run
 
 ## Porting order
 
@@ -16,18 +16,19 @@ trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include
 - [x] 6. dwm.c skeleton - every function a stub, `vanitygaps.c` stubbed too (config.h needs its layouts)
 - [x] 7. dwm.c, first half - `applyrules` .. `manage`
 - [x] 8. dwm.c, second half - `manage` .. `zoom`, then `main()`
-- [ ] 9. vanitygaps - fill the `vanitygaps.c` stubs
-- [ ] 10. man page, README, tests, functional test, `~/.config/dwmc/config.h`
+- [x] 9. vanitygaps - `vanitygaps.c`
+- [x] 10. man page (`dwmc.1`), README, tests, functional test, `~/.config/dwmc/config.h`
 - [ ] 11. dwmblocksc
 
-While the vanitygaps.c stubs remain, the build warns only about them
-(`fibonacci`, `getfacts`, `getgaps`, `setgaps`, `enablegaps`, `browsergaps`);
-every other warning is a bug, except `quit` unused with config/config.h,
-which has no quit binding (dwmr's shipped config neither: the powermenu
-exits). `-Wno-unused-parameter` is in config.mk: dwm's handlers ignore their
-`arg` everywhere, and dwm builds without -Wextra.
+The gcc/clang builds warn only about `quit` being unused with
+config/config.h (and so with `~/.config/dwmc/config.h`, a copy of it), which
+has no quit binding (dwmr's shipped config neither: the powermenu exits).
+The sanitized builds (`make test`, `make debug`) with gcc also warn "null
+format string" in `die()`: a gcc false positive under -fsanitize, nothing
+passes NULL. `-Wno-unused-parameter` is in config.mk: dwm's handlers ignore
+their `arg` everywhere, and dwm builds without -Wextra.
 
-## Decisions the remaining groups must follow
+## Decisions the port follows
 
 - **Status drawing** (drawstatusbar, buttonpress): no allocation. The
   signal-byte-free copy of `stext` is a local `char[sizeof stext]`, not
@@ -75,6 +76,12 @@ exits). `-Wno-unused-parameter` is in config.mk: dwm's handlers ignore their
   stays "dwm"; messages say "dwmc:"; `updatestatus()`'s default text is
   "dwmc-" VERSION.
 
+- **mfact to int** (vanitygaps.c): `ftoi()` converts the mfact products
+  like dwmr's `as i32` (NaN is 0, saturating), but at half the int limits
+  so the int arithmetic after it cannot overflow (dwmr wraps there); it
+  differs from dwmr only for mfact values far outside 0..1. `incrgaps()`
+  limits its step to `GAP_MAX`, which gives what `saturating_add` gives
+  after `setgaps()` clamps.
 - **vanitygaps** reads `browsergaps` (config.h) as its runtime state, which
   `togglebgaps()` flips (dwmr copies it into a field since its config is
   immutable), and `enablegaps` (vanitygaps.c).
@@ -109,9 +116,31 @@ in updategeom/cleanupmon) do not occur in dwmc.
 - Negative builds: 30 tags + 2 scratchpads, empty `fonts[]`, empty
   `layouts[]` fail to compile; 29 + 2 builds.
 
+- Functional test A (Xvfb, `make debug` with config.def.h): spawn,
+  focus/push stack, zoom, every config.def.h layout, gaps keys, nmaster,
+  mfact, float, fullscreen, sticky, tags, shiftview, both scratchpads,
+  swallow (the terminal is unmapped and comes back), clicks on tags, layout
+  symbol and status (the signal reaches the status bar by argv[0]), kill,
+  togglebar; `alt+shift+q` exits 0 with no ASan/UBSan/LSan report (LSan run
+  with `fast_unwind_on_malloc=0` and `tools/lsan.supp`, which suppresses
+  only fontconfig's configuration loaded by XftInit).
+- Functional test B, dwmr (`config/config.toml`) on :98 against dwmc-debug
+  (`config/config.h`) on :99, the same 31-step xdotool sequence (4
+  terminals, all 8 layouts, gaps, focus, zoom, float, fullscreen, tags,
+  scratchpad, clicks on tag bar and status, kill): `xwininfo -root -tree`
+  and the `_NET_*` root properties identical at every step (window ids
+  masked, the wmcheck window's name aside), the bar pixel-identical.
+  Test stubs in PATH: `killall` (a no-op, so the live dwmblocksr survives),
+  `wezterm` (xterm with that class), the status bars (`xsetroot` a fixed
+  text, then `exec -a <name> sleep`); dwmr's copy of config.toml names the
+  status bar `dwmblocksx`, so no click signals the live dwmblocksr.
+- `dwmc` on the live display: "dwmc: another window manager is already
+  running", exit 1; `-v` and usage as dwmr's (exit 1).
+
 ## Run log
 
 | Run | Files | ~C lines | Build | Tests |
 | --- | --- | --- | --- | --- |
 | 1 | setup, util.c/h, drw.c/h, transient.c, dwm.c + vanitygaps.c skeleton, config.def.h, config/config.h, test.c | 2750 (900 of them stubs) | gcc, clang, no-Xinerama, both configs: only stub warnings; scan-build clean | make test (util, drw) passes under ASan+UBSan |
 | 2 | dwm.c: all functions and main() | 2000 | gcc, clang, no-Xinerama, both configs: only vanitygaps-stub warnings (+ `quit` with config/config.h); scan-build: the one report stock dwm has too | make test passes; no functional test yet (layouts are stubs) |
+| 3 | vanitygaps.c, dwmc.1, README, tools/lsan.supp, `~/.config/dwmc/config.h` | 470 + 400 man | gcc, clang, no-Xinerama, both configs: only `quit` unused (config/config.h); scan-build: the known report | make test passes; functional tests A and B pass (Xvfb) |
