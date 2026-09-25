@@ -1,0 +1,7 @@
+dwmc
+dwmc-debug
+test
+test.d/
+transient
+*.o
+/config.h

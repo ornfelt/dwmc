@@ -1,0 +1,449 @@
+/* See LICENSE file for copyright and license details. */
+/* Mirrors dwmr/config/config.toml */
+
+/* Constants */
+#define TERMINAL "wezterm"
+#define TERMCLASS "wezterm"
+#define SECTERMINAL "st"
+
+#define FILES "thunar"
+#define FILEX "yazi"
+
+/* appearance */
+static unsigned int borderpx    = 2;        /* border pixel of windows */
+static unsigned int snap        = 32;       /* snap pixel */
+static unsigned int gappih      = 20;       /* horiz inner gap between windows */
+static unsigned int gappiv      = 20;       /* vert inner gap between windows */
+static unsigned int gappoh      = 20;       /* horiz outer gap between windows and screen edge */
+static unsigned int gappov      = 20;       /* vert outer gap between windows and screen edge */
+static int swallowfloating      = 0;        /* 1 means swallow floating windows by default */
+static int smartgaps            = 0;        /* 1 means no outer gap when there is only one window */
+static int browsergaps          = 0;        /* 0 means no outer gap when there is only one window and it is firefox */
+static int showbar              = 1;        /* 0 means no bar */
+static int topbar               = 1;        /* 0 means bottom bar */
+static const int focusonwheel   = 0;        /* 0 allows the user to scroll window without changing focus */
+static const char *fonts[]      = { "JetBrainsMono Nerd Font:size=11:style=bold" };
+/* bigger font for status text between ^B^ and ^N^, e.g. a block's icon */
+static const char *statusbigfonts[] = { "JetBrainsMono Nerd Font:size=15:style=bold" };
+/* "#RRGGBB": the resources[] below are written into them */
+static char normbgcolor[]       = "#282828";
+static char normbordercolor[]   = "#282828";
+static char normfgcolor[]       = "#ebdbb2";
+static char selfgcolor[]        = "#ebdbb2";
+static char selbordercolor[]    = "#ebdbb2";
+static char selbgcolor[]        = "#282828";
+/* status text colors (status2d): the text starts in col1; ^3^..^6^ switch to
+ * col3..col6, ^c#rrggbb^ to any color and ^2^ to the weather color from the
+ * temperature after it: +20 and above col21, below +20 col22, negative col23,
+ * no sign col24 */
+static const char col1[]        = "#98971a";
+static const char col21[]       = "#fb4934";
+static const char col22[]       = "#ebdbb2";
+static const char col23[]       = "#458588";
+static const char col24[]       = "#ebdbb2";
+static const char col3[]        = "#fabd2f";
+static const char col4[]        = "#83a598";
+static const char col5[]        = "#d3869b";
+static const char col6[]        = "#8ec07c";
+static const char *colors[][3]  = {
+    /*               fg              bg              border   */
+    [SchemeNorm] = { normfgcolor,   normbgcolor,    normbordercolor },
+    [SchemeSel]  = { selfgcolor,    selbgcolor,     selbordercolor },
+};
+
+/* Scratchpads: each has its own tag bit above the normal tags, SPTAG(i), and
+ * a command that togglescratch spawns when no window has that tag yet. The
+ * tags and the scratchpads together must not exceed 31. */
+static const char *spcmd1[] = {"st", "-n", "spterm", "-e", "python3", NULL };
+static const char *spcmd2[] = {"st", "-n", "spcalc", NULL };
+static const Sp scratchpads[] = {
+    /* name          cmd  */
+    {"spterm",      spcmd1},
+    {"spcalc",      spcmd2},
+};
+
+/* tagging */
+static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
+static const Rule rules[] = {
+    /* xprop(1):
+     *    WM_CLASS(STRING) = instance, class
+     *    WM_NAME(STRING) = title
+     */
+    /* class        instance                title               tags mask       isfloating   isterminal noswallow   monitor */
+    { TERMCLASS,    NULL,                   NULL,               0,              0,           1,         0,          -1 },
+    { NULL,         NULL,                   "Event Tester",     0,              0,           0,         1,          -1 }, /* xev */
+    { NULL,         "spterm",               NULL,               SPTAG(0),       1,           1,         1,          -1 },
+    { NULL,         "spcalc",               NULL,               SPTAG(1),       1,           1,         0,          -1 },
+    { NULL,         "gnome-calculator",     NULL,               0,              1,           0,         0,          -1 },
+    { NULL,         "gnome-calendar",       NULL,               0,              1,           0,         0,          -1 },
+    { NULL,         "yad",                  NULL,               0,              1,           0,         0,          -1 },
+    { NULL,         "nm-connection-editor", NULL,               0,              1,           0,         0,          -1 },
+};
+
+/* layout(s) */
+static float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
+static int nmaster     = 1;    /* number of clients in master area */
+static int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
+static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
+static const int refreshrate = 120;  /* refresh rate (per second) for client move/resize */
+
+static const Layout layouts[] = {
+    /* symbol       arrange function */
+    { "[@]",        spiral },                   /* Default: Fibonacci spiral */
+    { "[]=",        tile },                     /* Master on left, slaves on right */
+    { "TTT",        bstack },                   /* Master on top, slaves on bottom */
+    { "[\\]",       dwindle },                  /* Decreasing in size right and leftward */
+    { "[D]",        deck },                     /* Master on left, slaves in monocle-like mode on right */
+    { "[M]",        monocle },                  /* All windows on top of eachother */
+    { "|M|",        centeredmaster },           /* Master in middle, slaves on sides */
+    { ">M>",        centeredfloatingmaster },   /* Same but master floats */
+    { "><>",        NULL },                     /* no layout function means floating behavior */
+};
+
+/* key definitions */
+#define MODKEY Mod4Mask
+#define MODKEY1 Mod1Mask
+/* TAGKEYS(KEY, TAG): MODKEY+key views the tag, +Control tags the window,
+ * +Shift tags the window and views the tag, +Control+Shift toggles the
+ * view. With two monitors the odd tags live on the first and the even
+ * tags on the second: view and tag switch to the tag's monitor. */
+#define TAGKEYS(KEY,TAG) \
+{ MODKEY,                       KEY,      view,         {.ui = 1 << TAG} }, \
+{ MODKEY|ControlMask,           KEY,      tag,          {.ui = 1 << TAG} }, \
+{ MODKEY|ShiftMask,             KEY,      tagview,      {.ui = 1 << TAG} }, \
+{ MODKEY|ControlMask|ShiftMask, KEY,      toggleview,   {.ui = 1 << TAG} },
+/* focusstack/pushstack take a stack position (stacker): INC(n) is relative
+ * to the focused window, 0 is the top, -1 the bottom */
+#define STACKKEYS(MOD,ACTION) \
+{ MOD,                  XK_j,    ACTION##stack,    {.i = INC(+1) } }, \
+{ MOD,                  XK_k,    ACTION##stack,    {.i = INC(-1) } }, \
+{ MOD|ControlMask,      XK_j,    ACTION##stack,    {.i = -1 } }, \
+{ MOD|ControlMask,      XK_k,    ACTION##stack,    {.i = 0 } },
+
+/* helper for spawning shell commands in the pre dwm-5.0 fashion */
+#define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
+
+/* the status bar program, e.g. dwmblocksc or dwmblocks, found by process name.
+ * A click on a status block that starts with a signal byte runs sigstatusbar,
+ * which sends that block's signal to the program with the button as the value
+ * (statuscmd). "" disables the clicks */
+static const char statusbar[] = "dwmblocksc";
+
+/* the command dwmc runs once at startup, after the existing windows have been
+ * taken over; here it (re)starts the status bar. { NULL } runs none */
+static const char *autostart[] = { "sh", "-c", "killall -q dwmblocksc; dwmblocksc &", NULL };
+
+/* commands */
+static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+static const char *termcmd[]  = { TERMINAL, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", "JetBrainsMono Nerd Font:size=11:style=bold", NULL };
+
+/*
+ * Xresources preferences to load at startup; the same resource may set
+ * several values, and sel's fg/bg are deliberately inverted
+ */
+static const ResourcePref resources[] = {
+    { "color0",             STRING,     &normbordercolor },
+    { "foreground",         STRING,     &selbordercolor },
+    { "color0",             STRING,     &normbgcolor },
+    { "foreground",         STRING,     &normfgcolor },
+    { "color0",             STRING,     &selfgcolor },
+    { "foreground",         STRING,     &selbgcolor },
+    { "borderpx",           INTEGER,    &borderpx },
+    { "snap",               INTEGER,    &snap },
+    { "showbar",            INTEGER,    &showbar },
+    { "topbar",             INTEGER,    &topbar },
+    { "nmaster",            INTEGER,    &nmaster },
+    { "resizehints",        INTEGER,    &resizehints },
+    { "mfact",              FLOAT,      &mfact },
+    { "gappih",             INTEGER,    &gappih },
+    { "gappiv",             INTEGER,    &gappiv },
+    { "gappoh",             INTEGER,    &gappoh },
+    { "gappov",             INTEGER,    &gappov },
+    { "swallowfloating",    INTEGER,    &swallowfloating },
+    { "smartgaps",          INTEGER,    &smartgaps },
+};
+
+#include <X11/XF86keysym.h>
+
+/* There is no quit binding: exit through the powermenu (mod-shift-e). */
+static const Key keys[] = {
+    /*  modifier                    key                 function            argument */
+        /* bind mod-j: focusstack +1 (focus next window) */
+        /* bind mod-k: focusstack -1 (focus previous window) */
+        /* bind mod-ctrl-j: focusstack -1 (focus bottom of stack) */
+        /* bind mod-ctrl-k: focusstack 0 (focus top of stack) */
+        STACKKEYS(MODKEY,                               focus)
+        /* bind mod-shift-j: pushstack +1 (move window down stack) */
+        /* bind mod-shift-k: pushstack -1 (move window up stack) */
+        /* bind mod-shift-ctrl-j: pushstack -1 (move window to bottom) */
+        /* bind mod-shift-ctrl-k: pushstack 0 (move window to top) */
+        STACKKEYS(MODKEY|ShiftMask,                     push)
+        /* bind mod-grave: spawn dmenu_run */
+        { MODKEY,                   XK_grave,           spawn,              SHCMD("dmenu_run -fn 'Linux Libertine Mono'") },
+        /* bind mod-[1-9]: view tag [0-8] */
+        /* bind mod-ctrl-[1-9]: tag window to [0-8] */
+        /* bind mod-shift-[1-9]: tagview [0-8] */
+        /* bind mod-ctrl-shift-[1-9]: toggleview [0-8] */
+        TAGKEYS(                    XK_1,               0)
+        TAGKEYS(                    XK_2,               1)
+        TAGKEYS(                    XK_3,               2)
+        TAGKEYS(                    XK_4,               3)
+        TAGKEYS(                    XK_5,               4)
+        TAGKEYS(                    XK_6,               5)
+        TAGKEYS(                    XK_7,               6)
+        TAGKEYS(                    XK_8,               7)
+        TAGKEYS(                    XK_9,               8)
+        /* bind mod-0: view all tags */
+        { MODKEY,                   XK_0,               view,               {.ui = ~0 } },
+        /* bind mod-shift-0: tag window to all tags */
+        { MODKEY|ShiftMask,         XK_0,               tag,                {.ui = ~0 } },
+
+        /* Layouts */
+        /* bind mod-shift-less: togglesticky */
+        { MODKEY|ShiftMask,         XK_less,            togglesticky,       {0} },
+        /* bind mod-less: setlayout spiral */
+        { MODKEY,                   XK_less,            setlayout,          {.v = &layouts[0]} },
+        /* bind mod-s: setlayout bstack */
+        { MODKEY,                   XK_s,               setlayout,          {.v = &layouts[2]} },
+        /* bind mod-ctrl-t: setlayout tile */
+        { MODKEY|ControlMask,       XK_t,               setlayout,          {.v = &layouts[1]} },
+        /* bind mod-ctrl-y: setlayout dwindle */
+        { MODKEY|ControlMask,       XK_y,               setlayout,          {.v = &layouts[3]} },
+        /* bind mod-ctrl-u: setlayout deck */
+        { MODKEY|ControlMask,       XK_u,               setlayout,          {.v = &layouts[4]} },
+        /* bind mod-ctrl-i: setlayout monocle */
+        { MODKEY|ControlMask,       XK_i,               setlayout,          {.v = &layouts[5]} },
+        /* bind mod-ctrl-o: setlayout centeredmaster */
+        { MODKEY|ControlMask,       XK_o,               setlayout,          {.v = &layouts[6]} },
+        /* bind mod-ctrl-p: setlayout centeredfloatingmaster */
+        { MODKEY|ControlMask,       XK_p,               setlayout,          {.v = &layouts[7]} },
+        /* bind mod-ctrl-aring: setlayout floating */
+        { MODKEY|ControlMask,       XK_aring,           setlayout,          {.v = &layouts[8]} },
+        /* bind mod-f: togglefullscr */
+        { MODKEY,                   XK_f,               togglefullscr,      {0} },
+        /* bind mod-space: togglefloating */
+        { MODKEY,                   XK_space,           togglefloating,     {0} },
+        /* bind mod-shift-space: zoom (swap with master) */
+        { MODKEY|ShiftMask,         XK_space,           zoom,               {0} },
+        /* bind mod-y: setmfact -0.05 (shrink master) */
+        { MODKEY,                   XK_y,               setmfact,           {.f = -0.05} },
+        /* bind mod-o: setmfact +0.05 (grow master) */
+        { MODKEY,                   XK_o,               setmfact,           {.f = +0.05} },
+        /* bind mod-shift-u: incnmaster +1 */
+        { MODKEY|ShiftMask,         XK_u,               incnmaster,         {.i = +1 } },
+        /* bind mod-shift-i: incnmaster -1 */
+        { MODKEY|ShiftMask,         XK_i,               incnmaster,         {.i = -1 } },
+        /* bind mod-shift-y: shifttag +1 (move window to next tag) */
+        { MODKEY|ShiftMask,         XK_y,               shifttag,           { .i = +1 } },
+        /* bind mod-shift-o: shifttag -1 (move window to prev tag) */
+        { MODKEY|ShiftMask,         XK_o,               shifttag,           { .i = -1 } },
+        /* bind mod-x: defaultgaps */
+        { MODKEY,                   XK_x,               defaultgaps,        {0} },
+        /* bind mod-z: togglegaps */
+        { MODKEY,                   XK_z,               togglegaps,         {0} },
+        /* bind mod-ctrl-z: togglebgaps */
+        { MODKEY|ControlMask,       XK_z,               togglebgaps,        {0} },
+        /* bind mod-plus: incrgaps +3 */
+        { MODKEY,                   XK_plus,            incrgaps,           {.i = +3 } },
+        /* bind mod-minus: incrgaps -3 */
+        { MODKEY,                   XK_minus,           incrgaps,           {.i = -3 } },
+        /* bind mod-shift-plus: incrgaps +1 */
+        { MODKEY|ShiftMask,         XK_plus,            incrgaps,           {.i = +1 } },
+        /* bind mod-shift-minus: incrgaps -1 */
+        { MODKEY|ShiftMask,         XK_minus,           incrgaps,           {.i = -1 } },
+        /* bind alt-tab: shiftviewclients +1 (next occupied tag) */
+        { MODKEY1,                  XK_Tab,             shiftviewclients,   { .i = +1 } },
+        /* bind alt-shift-tab: shiftviewclients -1 (prev occupied tag) */
+        { MODKEY1|ShiftMask,        XK_Tab,             shiftviewclients,   { .i = -1 } },
+        /* bind mod-q: killclient */
+        { MODKEY,                   XK_q,               killclient,         {0} },
+        /* togglebars toggles the bar on every monitor, togglebar on the focused one */
+        /* bind mod-shift-p: togglebars */
+        { MODKEY|ShiftMask,         XK_p,               togglebars,         {0} },
+        /* bind mod-ctrl-shift-p: togglebar */
+        { MODKEY|ControlMask|ShiftMask,     XK_p,       togglebar,          {0} },
+        /* focusmon/tagmon focus/move to the previous or next monitor; tagmonview
+         * also views the target monitor; focusnthmon/tagnthmonview take a monitor
+         * number (0 is the first, too large is the last) */
+        /* bind mod-h: focusmon -1 (focus left monitor) */
+        { MODKEY,                   XK_h,               focusmon,           { .i = -1 } },
+        /* bind mod-shift-h: tagmonview -1 (move window and view left monitor) */
+        { MODKEY|ShiftMask,         XK_h,               tagmonview,         { .i = -1 } },
+        /* bind mod-ctrl-h: tagmon -1 (move window to left monitor) */
+        { MODKEY|ControlMask,       XK_h,               tagmon,             { .i = -1 } },
+        /* bind mod-l: focusmon +1 (focus right monitor) */
+        { MODKEY,                   XK_l,               focusmon,           { .i = +1 } },
+        /* bind mod-shift-l: tagmonview +1 (move window and view right monitor) */
+        { MODKEY|ShiftMask,         XK_l,               tagmonview,         { .i = +1 } },
+        /* bind mod-ctrl-l: tagmon +1 (move window to right monitor) */
+        { MODKEY|ControlMask,       XK_l,               tagmon,             { .i = +1 } },
+        /* bind mod-left: focusmon -1 */
+        { MODKEY,                   XK_Left,            focusmon,           { .i = -1 } },
+        /* bind mod-shift-left: tagmon -1 */
+        { MODKEY|ShiftMask,         XK_Left,            tagmon,             { .i = -1 } },
+        /* bind mod-right: focusmon +1 */
+        { MODKEY,                   XK_Right,           focusmon,           { .i = +1 } },
+        /* bind mod-shift-right: tagmon +1 */
+        { MODKEY|ShiftMask,         XK_Right,           tagmon,             { .i = +1 } },
+        /* bind mod-apostrophe: togglescratch spterm */
+        { MODKEY,                   XK_apostrophe,      togglescratch,      { .ui = 0 } },
+        /* bind mod-shift-apostrophe: togglescratch spcalc */
+        { MODKEY|ShiftMask,         XK_apostrophe,      togglescratch,      { .ui = 1 } },
+
+        /* bind mod-shift-x: spawn i3lock */
+        { MODKEY|ShiftMask,         XK_x,               spawn,              SHCMD("i3lock") },
+        /* bind mod-ctrl-x: spawn i3lock with wallpaper */
+        { MODKEY|ControlMask,       XK_x,               spawn,              SHCMD("i3lock -i ~/Downloads/lock-wallpaper.png")},
+        /* bind mod-w: spawn yazi ~/ */
+        { MODKEY,                   XK_w,               spawn,              SHCMD(TERMINAL " -e " FILEX " " "~/") },
+        /* bind mod-e: spawn file_explorer_wd.sh */
+        { MODKEY,                   XK_e,               spawn,              SHCMD("~/.local/bin/my_scripts/file_explorer_wd.sh " TERMINAL " " FILEX) },
+        /* bind mod-shift-e: spawn powermenu.sh */
+        { MODKEY|ShiftMask,         XK_e,               spawn,              SHCMD("~/.local/bin/my_scripts/alert_exit.sh && ~/.config/polybar/forest/scripts/powermenu.sh") },
+        /* bind mod-shift-s: spawn screenshot to clipboard */
+        { MODKEY|ShiftMask,         XK_s,               spawn,              SHCMD("f=$(mktemp --suffix=.png) && maim -s -u \"$f\" && xclip -selection clipboard -t image/png -i \"$f\"; rm -f \"$f\"") },
+        /* bind mod-ctrl-s: spawn tesseract_ocr.sh */
+        { MODKEY|ControlMask,       XK_s,               spawn,              SHCMD("~/.local/bin/my_scripts/tesseract_ocr.sh") },
+        /* bind mod-d: spawn rofi */
+        { MODKEY,                   XK_d,               spawn,              SHCMD("rofi -show run -theme ~/.config/rofi/themes/gruvbox/gruvbox-dark.rasi") },
+        /* bind mod-r: spawn dmenu_run */
+        { MODKEY,                   XK_r,               spawn,              SHCMD("dmenu_run -i -l 20") },
+        /* bind mod-shift-r: spawn rofi launcher */
+        { MODKEY|ShiftMask,         XK_r,               spawn,              SHCMD("rofi -show run -theme ~/.config/polybar/forest/scripts/rofi/launcher.rasi") },
+        /* bind mod-t: spawn script_copy.sh */
+        { MODKEY,                   XK_t,               spawn,              SHCMD("~/.local/bin/my_scripts/script_copy.sh") },
+        /* bind mod-shift-t: spawn script_helper.sh */
+        { MODKEY|ShiftMask,         XK_t,               spawn,              SHCMD("~/.local/bin/my_scripts/script_helper.sh " TERMINAL) },
+        /* bind mod-shift-c: spawn code_helper.sh new */
+        { MODKEY|ShiftMask,         XK_c,               spawn,              SHCMD("~/.local/bin/my_scripts/code_helper.sh new " TERMINAL) },
+        /* bind mod-shift-d: spawn code_helper.sh old */
+        { MODKEY|ShiftMask,         XK_d,               spawn,              SHCMD("~/.local/bin/my_scripts/code_helper.sh old " TERMINAL) },
+        /* bind mod-g: spawn fzf_open.sh */
+        { MODKEY,                   XK_g,               spawn,              SHCMD("~/.local/bin/my_scripts/fzf_open.sh " TERMINAL)},
+        /* bind mod-c: spawn term_calc.sh */
+        { MODKEY,                   XK_c,               spawn,              SHCMD("~/.local/bin/my_scripts/term_calc.sh " TERMINAL) },
+        /* bind mod-ctrl-c: spawn yad calendar */
+        { MODKEY|ControlMask,       XK_c,               spawn,              SHCMD("yad --calendar --no-buttons") },
+        /* bind mod-b: spawn htop */
+        { MODKEY,                   XK_b,               spawn,              SHCMD(TERMINAL " -e htop") },
+        /* bind mod-shift-b: spawn btop */
+        { MODKEY|ShiftMask,         XK_b,               spawn,              SHCMD(TERMINAL " -e btop") },
+        /* bind mod-ctrl-b: spawn ytop */
+        { MODKEY|ControlMask,       XK_b,               spawn,              SHCMD(TERMINAL " -e ytop") },
+        /* bind mod-p: spawn xrandr_helper.sh */
+        { MODKEY,                   XK_p,               spawn,              SHCMD("~/.local/bin/my_scripts/xrandr_helper.sh") },
+        /* bind mod-n: spawn files_wd.sh */
+        { MODKEY,                   XK_n,               spawn,              SHCMD("~/.local/bin/my_scripts/files_wd.sh") },
+        /* bind mod-shift-n: spawn thunar */
+        { MODKEY|ShiftMask,         XK_n,               spawn,              SHCMD(FILES) },
+        /* bind mod-ctrl-n: spawn open_notes.sh 1 */
+        { MODKEY|ControlMask,       XK_n,               spawn,              SHCMD("~/.local/bin/my_scripts/open_notes.sh 1 " TERMINAL) },
+        /* bind mod-m: spawn nm-connection-editor */
+        { MODKEY,                   XK_m,               spawn,              SHCMD("nm-connection-editor") },
+        /* bind mod-shift-m: spawn spotify */
+        { MODKEY|ShiftMask,         XK_m,               spawn,              SHCMD("spotify") },
+        /* bind mod-ctrl-m: spawn open_notes.sh 2 */
+        { MODKEY|ControlMask,       XK_m,               spawn,              SHCMD("~/.local/bin/my_scripts/open_notes.sh 2 " TERMINAL) },
+        /* bind mod-shift-comma: spawn suspend.sh */
+        { MODKEY|ShiftMask,         XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/alert_exit.sh && ~/.local/bin/my_scripts/suspend.sh")},
+        /* bind mod-ctrl-comma: spawn suspend_mute.sh */
+        { MODKEY|ControlMask,       XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/alert_exit.sh && ~/.local/bin/my_scripts/suspend_mute.sh")},
+        /* bind mod-shift-period: spawn i3lock + suspend */
+        { MODKEY|ShiftMask,         XK_period,          spawn,              SHCMD("i3lock && ~/.local/bin/my_scripts/alert_exit.sh && systemctl suspend")},
+        /* bind mod-v: spawn clip_history.sh greenclip */
+        { MODKEY,                   XK_v,               spawn,              SHCMD("~/.local/bin/my_scripts/clip_history.sh greenclip") },
+        /* bind mod-shift-v: spawn qr_clip.sh */
+        { MODKEY|ShiftMask,         XK_v,               spawn,              SHCMD("~/.local/bin/my_scripts/qr_clip.sh") },
+        /* bind mod-comma: spawn progrm_helper.sh */
+        { MODKEY,                   XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/progrm_helper.sh " TERMINAL) },
+        /* bind mod-period: spawn emojipick */
+        { MODKEY,                   XK_period,          spawn,              SHCMD("~/.local/bin/my_scripts/emojipick/emojipick") },
+        /* bind mod-a: spawn tmux_attach.sh */
+        { MODKEY,                   XK_a,               spawn,              SHCMD("~/.local/bin/my_scripts/tmux_attach.sh " TERMINAL) },
+        /* bind mod-shift-a: spawn picom-trans -5 */
+        { MODKEY|ShiftMask,         XK_a,               spawn,              SHCMD("picom-trans -c -5")},
+        /* bind mod-ctrl-a: spawn picom-trans +5 */
+        { MODKEY|ControlMask,       XK_a,               spawn,              SHCMD("picom-trans -c +5")},
+        /* bind mod-section: spawn loadEww.sh */
+        { MODKEY,                   XK_section,         spawn,              SHCMD("~/.local/bin/my_scripts/loadEww.sh") },
+        /* bind mod-return: spawn term_wd.sh */
+        { MODKEY,                   XK_Return,          spawn,              SHCMD("~/.local/bin/my_scripts/term_wd.sh " TERMINAL) },
+        /* bind mod-shift-return: spawn terminal */
+        { MODKEY|ShiftMask,         XK_Return,          spawn,              {.v = termcmd } },
+        /* bind mod-ctrl-return: spawn term_wd.sh st */
+        { MODKEY|ControlMask,       XK_Return,          spawn,              SHCMD("~/.local/bin/my_scripts/term_wd.sh " SECTERMINAL) },
+
+        /* bind F1: spawn show_keys.sh dwm */
+        { 0,                        XK_F1,              spawn,              SHCMD("~/.local/bin/my_scripts/show_keys.sh dwm " TERMINAL) },
+        /* bind shift-F1: spawn show_keys.sh vim */
+        { ShiftMask,                XK_F1,              spawn,              SHCMD("~/.local/bin/my_scripts/show_keys.sh vim " TERMINAL) },
+        /* bind F10: spawn pactl toggle mute */
+        { 0,                        XK_F10,             spawn,              SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle ; kill -44 $(pidof dwmblocksc)") },
+        /* bind F11: spawn pactl volume -5% */
+        { 0,                        XK_F11,             spawn,              SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -5%; kill -44 $(pidof dwmblocksc)") },
+        /* bind F12: spawn pactl volume +5% */
+        { 0,                        XK_F12,             spawn,              SHCMD("pactl set-sink-volume @DEFAULT_SINK@ +5%; kill -44 $(pidof dwmblocksc)") },
+        /* bind Print: spawn screenshot_select.sh */
+        { 0,                        XK_Print,           spawn,              SHCMD("~/.local/bin/my_scripts/screenshot_select.sh") },
+        /* bind shift-Print: spawn screenshot.sh */
+        { ShiftMask,                XK_Print,           spawn,              SHCMD("~/.local/bin/my_scripts/screenshot.sh") },
+        /* bind ctrl-Print: spawn screenshot_ocr.sh */
+        { ControlMask,              XK_Print,           spawn,              SHCMD("~/.local/bin/my_scripts/screenshot_ocr.sh") },
+
+        /* bind XF86AudioMute: spawn pactl toggle mute */
+        { 0, XF86XK_AudioMute,                          spawn,              SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle ; kill -44 $(pidof dwmblocksc)") },
+        /* bind XF86AudioRaiseVolume: spawn pactl volume +5% */
+        { 0, XF86XK_AudioRaiseVolume,                   spawn,              SHCMD("pactl set-sink-volume @DEFAULT_SINK@ +5%; kill -44 $(pidof dwmblocksc)") },
+        /* bind XF86AudioLowerVolume: spawn pactl volume -5% */
+        { 0, XF86XK_AudioLowerVolume,                   spawn,              SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -5%; kill -44 $(pidof dwmblocksc)") },
+        /* bind XF86MonBrightnessUp: spawn brightness.sh +10 */
+        { 0, XF86XK_MonBrightnessUp,                    spawn,              SHCMD("~/.local/bin/my_scripts/brightness.sh +10") },
+        /* bind XF86MonBrightnessDown: spawn brightness.sh -10 */
+        { 0, XF86XK_MonBrightnessDown,                  spawn,              SHCMD("~/.local/bin/my_scripts/brightness.sh -10") },
+};
+
+/* button definitions */
+/* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkClientWin, or ClkRootWin */
+static const Button buttons[] = {
+    /* click                event mask      button          function        argument */
+    /* bind statustext-button1: sigstatusbar 1 */
+    { ClkStatusText,        0,              Button1,        sigstatusbar,   {.i = 1} },
+    /* bind statustext-button2: sigstatusbar 2 */
+    { ClkStatusText,        0,              Button2,        sigstatusbar,   {.i = 2} },
+    /* bind statustext-button3: sigstatusbar 3 */
+    { ClkStatusText,        0,              Button3,        sigstatusbar,   {.i = 3} },
+    /* bind statustext-button4: sigstatusbar 4 (scroll up) */
+    { ClkStatusText,        0,              Button4,        sigstatusbar,   {.i = 4} },
+    /* bind statustext-button5: sigstatusbar 5 (scroll down) */
+    { ClkStatusText,        0,              Button5,        sigstatusbar,   {.i = 5} },
+    /* bind statustext-shift-button1: sigstatusbar 6 */
+    { ClkStatusText,        ShiftMask,      Button1,        sigstatusbar,   {.i = 6} },
+    /* bind statustext-shift-button3: spawn nvim dwmblocksc config */
+    { ClkStatusText,        ShiftMask,      Button3,        spawn,          SHCMD(TERMINAL " -e nvim ~/.config/dwmblocksc/blocks.h") },
+    /* bind clientwin-mod-button1: movemouse */
+    { ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
+    /* bind clientwin-mod-button2: defaultgaps */
+    { ClkClientWin,         MODKEY,         Button2,        defaultgaps,    {0} },
+    /* bind clientwin-mod-button3: resizemouse */
+    { ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
+    /* bind clientwin-mod-button4: incrgaps +1 (scroll up) */
+    { ClkClientWin,         MODKEY,         Button4,        incrgaps,       {.i = +1} },
+    /* bind clientwin-mod-button5: incrgaps -1 (scroll down) */
+    { ClkClientWin,         MODKEY,         Button5,        incrgaps,       {.i = -1} },
+    /* bind tagbar-button1: view */
+    { ClkTagBar,            0,              Button1,        view,           {0} },
+    /* bind tagbar-button3: toggleview */
+    { ClkTagBar,            0,              Button3,        toggleview,     {0} },
+    /* bind tagbar-mod-button1: tag */
+    { ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
+    /* bind tagbar-mod-button3: toggletag */
+    { ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
+    /* bind tagbar-button4: shiftview -1 (scroll up) */
+    { ClkTagBar,            0,              Button4,        shiftview,      {.i = -1} },
+    /* bind tagbar-button5: shiftview +1 (scroll down) */
+    { ClkTagBar,            0,              Button5,        shiftview,      {.i = 1} },
+    /* bind rootwin-button2: togglebar */
+    { ClkRootWin,           0,              Button2,        togglebar,      {0} },
+};
