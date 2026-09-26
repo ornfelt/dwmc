@@ -264,6 +264,8 @@ static const Key keys[] = {
         { MODKEY|ShiftMask,         XK_p,               togglebars,         {0} },
         /* bind mod-ctrl-shift-p: togglebar */
         { MODKEY|ControlMask|ShiftMask,     XK_p,       togglebar,          {0} },
+        /* bind mod-ctrl-p: sb-sysinfo toggle (show/hide the net, memory and cpu blocks) */
+        { MODKEY|ControlMask,       XK_p,               spawn,              SHCMD("~/.local/bin/statusbar/sb-sysinfo toggle") },
         /* focusmon/tagmon focus/move to the previous or next monitor; tagmonview
          * also views the target monitor; focusnthmon/tagnthmonview take a monitor
          * number (0 is the first, too large is the last) */
