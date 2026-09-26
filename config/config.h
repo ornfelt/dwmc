@@ -289,6 +289,8 @@ static const Key keys[] = {
         { MODKEY,                   XK_apostrophe,      togglescratch,      { .ui = 0 } },
         /* bind mod-shift-apostrophe: togglescratch spcalc */
         { MODKEY|ShiftMask,         XK_apostrophe,      togglescratch,      { .ui = 1 } },
+        /* bind mod-F12: togglescratch spcalc (like awesome's dropdown terminal) */
+        { MODKEY,                   XK_F12,             togglescratch,      { .ui = 1 } },
 
         /* bind mod-shift-x: spawn i3lock */
         { MODKEY|ShiftMask,         XK_x,               spawn,              SHCMD("i3lock") },
