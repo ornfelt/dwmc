@@ -106,6 +106,11 @@ A few notes on the configuration:
   patch). cyclelayout is bound to the mouse wheel on the layout symbol,
   layoutmenu to a click on it and to Mod-r; my layoutmenucmd is
   `layout_menu.sh`, a rofi grid with an ascii preview of each layout.
+- With `layoutalltags = 1` (the default) setlayout sets the layout of every tag
+  and monitor; with 0 each tag keeps its own and a monitor shows the one of
+  its first viewed tag. `togglelayoutalltags` (Mod-Shift-r) switches between
+  the two at runtime; switching back to all tags gives every tag the current
+  layout.
 - `scratchpads[]` is a list of `{ name, cmd }` (dwm's scratchpads patch). Each
   scratchpad owns a tag bit above the normal tags, `SPTAG(0)`, `SPTAG(1)`,
   ... in a rule's tags mask; the tags and the scratchpads together are

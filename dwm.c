@@ -283,6 +283,7 @@ static void tagview(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglebars(const Arg *arg);
 static void togglefloating(const Arg *arg);
+static void togglelayoutalltags(const Arg *arg);
 static void togglefullscr(const Arg *arg);
 static void togglescratch(const Arg *arg);
 static void togglesticky(const Arg *arg);
@@ -394,6 +395,9 @@ struct NumTags { char limitexceeded[LENGTH(tags) < 1 || NUMTAGS > 31 ? -1 : 1]; 
 struct NumFonts { char nofonts[LENGTH(fonts) < 1 ? -1 : 1]; };
 /* "layouts must not be empty" */
 struct NumLayouts { char nolayouts[LENGTH(layouts) < 1 ? -1 : 1]; };
+
+/* the index in layouts[] of each tag's layout, used when !layoutalltags */
+static unsigned int taglayouts[LENGTH(tags)];
 /* "colors must define the SchemeNorm and SchemeSel schemes" */
 struct NumColors { char noschemes[LENGTH(colors) < 2 ? -1 : 1]; };
 /* The scalars dwmr checks (gaps at most GAP_MAX, refreshrate at least 1) are
@@ -535,6 +539,14 @@ arrange(Monitor *m)
 void
 arrangemon(Monitor *m)
 {
+	unsigned int i;
+
+	/* a layout per tag: the one of the first viewed tag */
+	for (i = 0; !layoutalltags && running && i < LENGTH(tags); i++)
+		if (m->tagset[m->seltags] & 1 << i) {
+			m->lt[m->sellt] = &layouts[taglayouts[i]];
+			break;
+		}
 	truncate_utf8(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
 	if (m->lt[m->sellt]->arrange)
 		m->lt[m->sellt]->arrange(m);
@@ -2167,6 +2179,7 @@ setlayout(const Arg *arg)
 {
 	const Layout *l = NULL;
 	unsigned int i;
+	Monitor *m;
 
 	/* only a layout of layouts[]: dwmr rejects any other index */
 	for (i = 0; arg && arg->v && i < LENGTH(layouts); i++)
@@ -2176,6 +2189,15 @@ setlayout(const Arg *arg)
 		selmon->sellt ^= 1;
 	if (l)
 		selmon->lt[selmon->sellt] = l;
+	/* every tag and monitor takes it (layoutalltags), else the viewed tags */
+	for (i = 0; i < LENGTH(tags); i++)
+		if (layoutalltags || selmon->tagset[selmon->seltags] & 1 << i)
+			taglayouts[i] = selmon->lt[selmon->sellt] - layouts;
+	for (m = mons; layoutalltags && m; m = m->next)
+		if (m != selmon) {
+			m->lt[m->sellt] = selmon->lt[selmon->sellt];
+			arrange(m);
+		}
 	truncate_utf8(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
 	if (selmon->sel)
 		arrange(selmon);
@@ -2605,6 +2627,18 @@ togglebars(const Arg *arg)
 		XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
 		arrange(m);
 	}
+}
+
+/* Toggle between one layout for every tag and monitor and a layout per
+ * tag (layoutalltags). */
+void
+togglelayoutalltags(const Arg *arg)
+{
+	layoutalltags = !layoutalltags;
+	if (layoutalltags) /* every tag takes the current layout */
+		setlayout(&((Arg) { .v = selmon->lt[selmon->sellt] }));
+	spawn(&((Arg) { .v = (const char *[]){ "notify-send", "-t", "2000", "dwmc",
+		layoutalltags ? "layout: all tags" : "layout: per tag", NULL } }));
 }
 
 void
