@@ -257,6 +257,8 @@ static const Key keys[] = {
         { MODKEY1|ShiftMask,        XK_Tab,             shiftviewclients,   { .i = -1 } },
         /* bind mod-q: killclient */
         { MODKEY,                   XK_q,               killclient,         {0} },
+        /* bind mod-u: focusurgent (jump to urgent window) */
+        { MODKEY,                   XK_u,               focusurgent,        {0} },
         /* togglebars toggles the bar on every monitor, togglebar on the focused one */
         /* bind mod-shift-p: togglebars */
         { MODKEY|ShiftMask,         XK_p,               togglebars,         {0} },
