@@ -167,7 +167,7 @@ static const ResourcePref resources[] = {
 
 #include <X11/XF86keysym.h>
 
-/* There is no quit binding: exit through the powermenu (mod-shift-e). */
+/* There is no quit binding: mod-shift-e and mod-shift-q open the power menu (sysmenu.sh), which exits. */
 static const Key keys[] = {
     /*  modifier                    key                 function            argument */
         /* bind mod-j: focusstack +1 (focus next window) */
@@ -304,6 +304,8 @@ static const Key keys[] = {
         { MODKEY,                   XK_e,               spawn,              SHCMD("~/.local/bin/my_scripts/file_explorer_wd.sh " TERMINAL " " FILEX) },
         /* bind mod-shift-e: spawn sysmenu.sh */
         { MODKEY|ShiftMask,         XK_e,               spawn,              SHCMD("~/.local/bin/my_scripts/sysmenu.sh") },
+        /* bind mod-shift-q: spawn sysmenu.sh (quit through the power menu, like awesome) */
+        { MODKEY|ShiftMask,         XK_q,               spawn,              SHCMD("~/.local/bin/my_scripts/sysmenu.sh") },
         /* bind mod-shift-s: spawn screenshot to clipboard */
         { MODKEY|ShiftMask,         XK_s,               spawn,              SHCMD("~/.local/bin/my_scripts/win_screenshot_awsm.sh") },
         /* bind mod-ctrl-s: spawn tesseract_ocr.sh */
