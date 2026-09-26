@@ -377,8 +377,6 @@ static const Key keys[] = {
 
         /* bind F1: spawn show_keys.sh dwm */
         { 0,                        XK_F1,              spawn,              SHCMD("~/.local/bin/my_scripts/show_keys.sh dwm " TERMINAL) },
-        /* bind shift-F1: spawn show_keys.sh vim */
-        { ShiftMask,                XK_F1,              spawn,              SHCMD("~/.local/bin/my_scripts/show_keys.sh vim " TERMINAL) },
         /* bind F10: spawn pactl toggle mute */
         { 0,                        XK_F10,             spawn,              SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle ; kill -44 $(pidof dwmblocksc)") },
         /* bind F11: spawn pactl volume -5% */
