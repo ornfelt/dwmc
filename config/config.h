@@ -180,8 +180,6 @@ static const Key keys[] = {
         /* bind mod-shift-ctrl-j: pushstack -1 (move window to bottom) */
         /* bind mod-shift-ctrl-k: pushstack 0 (move window to top) */
         STACKKEYS(MODKEY|ShiftMask,                     push)
-        /* bind mod-grave: spawn dmenu_run */
-        { MODKEY,                   XK_grave,           spawn,              SHCMD("dmenu_run -fn 'Linux Libertine Mono'") },
         /* bind mod-[1-9]: view tag [0-8] */
         /* bind mod-ctrl-[1-9]: tag window to [0-8] */
         /* bind mod-shift-[1-9]: tagview [0-8] */
@@ -279,12 +277,12 @@ static const Key keys[] = {
         { MODKEY|ShiftMask,         XK_l,               tagmonview,         { .i = +1 } },
         /* bind mod-ctrl-l: tagmon +1 (move window to right monitor) */
         { MODKEY|ControlMask,       XK_l,               tagmon,             { .i = +1 } },
-        /* bind mod-left: focusmon -1 */
-        { MODKEY,                   XK_Left,            focusmon,           { .i = -1 } },
+        /* bind mod-left: shiftview -1 (view prev tag) */
+        { MODKEY,                   XK_Left,            shiftview,          { .i = -1 } },
         /* bind mod-shift-left: tagmon -1 */
         { MODKEY|ShiftMask,         XK_Left,            tagmon,             { .i = -1 } },
-        /* bind mod-right: focusmon +1 */
-        { MODKEY,                   XK_Right,           focusmon,           { .i = +1 } },
+        /* bind mod-right: shiftview +1 (view next tag) */
+        { MODKEY,                   XK_Right,           shiftview,          { .i = +1 } },
         /* bind mod-shift-right: tagmon +1 */
         { MODKEY|ShiftMask,         XK_Right,           tagmon,             { .i = +1 } },
         /* bind mod-apostrophe: togglescratch spterm */
@@ -303,7 +301,7 @@ static const Key keys[] = {
         /* bind mod-shift-e: spawn sysmenu.sh */
         { MODKEY|ShiftMask,         XK_e,               spawn,              SHCMD("~/.local/bin/my_scripts/sysmenu.sh") },
         /* bind mod-shift-s: spawn screenshot to clipboard */
-        { MODKEY|ShiftMask,         XK_s,               spawn,              SHCMD("f=$(mktemp --suffix=.png) && maim -s -u \"$f\" && xclip -selection clipboard -t image/png -i \"$f\"; rm -f \"$f\"") },
+        { MODKEY|ShiftMask,         XK_s,               spawn,              SHCMD("~/.local/bin/my_scripts/win_screenshot_awsm.sh") },
         /* bind mod-ctrl-s: spawn tesseract_ocr.sh */
         { MODKEY|ControlMask,       XK_s,               spawn,              SHCMD("~/.local/bin/my_scripts/tesseract_ocr.sh") },
         /* bind mod-d: spawn rofi */
@@ -320,8 +318,8 @@ static const Key keys[] = {
         { MODKEY|ShiftMask,         XK_c,               spawn,              SHCMD("~/.local/bin/my_scripts/code_helper.sh new " TERMINAL) },
         /* bind mod-shift-d: spawn code_helper.sh old */
         { MODKEY|ShiftMask,         XK_d,               spawn,              SHCMD("~/.local/bin/my_scripts/code_helper.sh old " TERMINAL) },
-        /* bind mod-g: spawn fzf_open.sh */
-        { MODKEY,                   XK_g,               spawn,              SHCMD("~/.local/bin/my_scripts/fzf_open.sh " TERMINAL)},
+        /* bind mod-g: spawn nvim_fzf.sh */
+        { MODKEY,                   XK_g,               spawn,              SHCMD("~/.local/bin/my_scripts/nvim_fzf.sh " TERMINAL)},
         /* bind mod-c: spawn term_calc.sh */
         { MODKEY,                   XK_c,               spawn,              SHCMD("~/.local/bin/my_scripts/term_calc.sh " TERMINAL) },
         /* bind mod-ctrl-c: spawn yad calendar */
@@ -330,8 +328,8 @@ static const Key keys[] = {
         { MODKEY,                   XK_b,               spawn,              SHCMD(TERMINAL " -e htop") },
         /* bind mod-shift-b: spawn btop */
         { MODKEY|ShiftMask,         XK_b,               spawn,              SHCMD(TERMINAL " -e btop") },
-        /* bind mod-ctrl-b: spawn ytop */
-        { MODKEY|ControlMask,       XK_b,               spawn,              SHCMD(TERMINAL " -e ytop") },
+        /* bind mod-ctrl-b: spawn sudo btop */
+        { MODKEY|ControlMask,       XK_b,               spawn,              SHCMD(TERMINAL " -e sudo btop") },
         /* bind mod-p: spawn xrandr_helper.sh */
         { MODKEY,                   XK_p,               spawn,              SHCMD("~/.local/bin/my_scripts/xrandr_helper.sh") },
         /* bind mod-n: spawn files_wd.sh */
@@ -346,8 +344,8 @@ static const Key keys[] = {
         { MODKEY|ShiftMask,         XK_m,               spawn,              SHCMD("spotify") },
         /* bind mod-ctrl-m: spawn open_notes.sh 2 */
         { MODKEY|ControlMask,       XK_m,               spawn,              SHCMD("~/.local/bin/my_scripts/open_notes.sh 2 " TERMINAL) },
-        /* bind mod-shift-comma: spawn suspend.sh */
-        { MODKEY|ShiftMask,         XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/alert_exit.sh && ~/.local/bin/my_scripts/suspend.sh")},
+        /* bind mod-shift-comma: spawn suspend_awsm.sh */
+        { MODKEY|ShiftMask,         XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/suspend_awsm.sh")},
         /* bind mod-ctrl-comma: spawn suspend_mute.sh */
         { MODKEY|ControlMask,       XK_comma,           spawn,              SHCMD("~/.local/bin/my_scripts/alert_exit.sh && ~/.local/bin/my_scripts/suspend_mute.sh")},
         /* bind mod-shift-period: spawn i3lock + suspend */
