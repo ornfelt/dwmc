@@ -23,8 +23,9 @@ trees are. Re-derive with: `grep -rn 'TODO: port body' . ../dwmblocksc --include
 The gcc/clang builds warn only about `quit` being unused with
 config/config.h (and so with `~/.config/dwmc/config.h`, a copy of it), which
 has no quit binding (dwmr's shipped config neither: the powermenu exits),
-and about `focusurgent` being unused with config.def.h, which (like dwm's)
-does not bind it; config/config.h binds it to mod-u.
+and about `focusurgent` and `setcfact` being unused with config.def.h, which
+(like dwm's) does not bind them; config/config.h binds them to mod-u and
+mod-alt-y/o/x.
 The sanitized builds (`make test`, `make debug`) with gcc also warn "null
 format string" in `die()`: a gcc false positive under -fsanitize, nothing
 passes NULL. `-Wno-unused-parameter` is in config.mk: dwm's handlers ignore

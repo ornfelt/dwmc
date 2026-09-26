@@ -4,8 +4,8 @@
  * and the screen edge, and the gap-aware layouts. dwm.c #includes it after
  * config.h; its functions are declared with dwm.c's.
  *
- * cfacts is not ported: every client has the weight 1, so getfacts() splits
- * an area evenly. */
+ * cfacts: every client has a weight (cfact, 1.0 unless setcfact() changes
+ * it), and the clients in an area of a layout share it by weight. */
 
 /* The largest gap setgaps() stores and createmon() takes from config.h. Not
  * in the patch: it keeps the gap arithmetic in the layouts far from
@@ -106,26 +106,41 @@ getgaps(Monitor *m, int *oh, int *ov, int *ih, int *iv, int *nc)
 	*nc = n;                  /* number of clients */
 }
 
-/* getfacts() without cfacts: every client weighs 1, so each master client
- * gets msize / mfacts and each stack client ssize / sfacts. Returns those
- * shares in mf and sf instead of the facts (so the layouts never divide),
- * plus the remainders. */
-void
-getfacts(Monitor *m, int msize, int ssize, int *mf, int *sf, int *mr, int *sr)
+/* The size of client c in an area of size total shared by clients whose
+ * weights add up to facts (so facts > 0). The patch computes
+ * total * (c->cfact / facts); dividing last keeps equal weights at exactly
+ * total / n, and ftoi() keeps an extreme total in range. */
+static int
+cfactsize(Client *c, int total, float facts)
 {
-	int n, mfacts = 0, sfacts = 0;
+	return ftoi(total * c->cfact / facts);
+}
+
+/* getfacts() of the cfacts patch: the total weight of the master and of the
+ * stack clients in mf and sf, and in mr and sr the pixels left after each
+ * client got its cfactsize() (the first ones get one more) */
+void
+getfacts(Monitor *m, int msize, int ssize, float *mf, float *sf, int *mr, int *sr)
+{
+	int n, mtotal = 0, stotal = 0;
+	float mfacts = 0, sfacts = 0;
 	Client *c;
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++)
 		if (n < m->nmaster)
-			mfacts++;
+			mfacts += c->cfact;
 		else
-			sfacts++;
+			sfacts += c->cfact;
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++)
+		if (n < m->nmaster)
+			mtotal += cfactsize(c, msize, mfacts);
+		else
+			stotal += cfactsize(c, ssize, sfacts);
 
-	*mf = mfacts ? msize / mfacts : 0; /* size of a master client */
-	*sf = sfacts ? ssize / sfacts : 0; /* size of a stack client */
-	*mr = msize - *mf * mfacts; /* the remainder (rest) of pixels after a master split */
-	*sr = ssize - *sf * sfacts; /* the remainder (rest) of pixels after a stack split */
+	*mf = mfacts; /* total factor of master area */
+	*sf = sfacts; /* total factor of stack area */
+	*mr = msize - mtotal; /* the remainder (rest) of pixels after a cfacts master split */
+	*sr = ssize - stotal; /* the remainder (rest) of pixels after a cfacts stack split */
 }
 
 /* The layouts clamp nmaster to 0..n, for n > 0 tiled clients. Not in the
@@ -147,7 +162,8 @@ bstack(Monitor *m)
 	int oh, ov, ih, iv;
 	int mx = 0, my = 0, mh = 0, mw = 0;
 	int sx = 0, sy = 0, sh = 0, sw = 0;
-	int mf, sf, mrest, srest;
+	float mf, sf;
+	int mrest, srest;
 	Client *c;
 
 	getgaps(m, &oh, &ov, &ih, &iv, &n);
@@ -172,10 +188,10 @@ bstack(Monitor *m)
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++) {
 		if (i < nmaster) {
-			resize(c, mx, my, mf + (i < mrest) - (2*c->bw), mh - (2*c->bw), 0);
+			resize(c, mx, my, cfactsize(c, mw, mf) + (i < mrest) - (2*c->bw), mh - (2*c->bw), 0);
 			mx += WIDTH(c) + iv;
 		} else {
-			resize(c, sx, sy, sf + ((i - nmaster) < srest) - (2*c->bw), sh - (2*c->bw), 0);
+			resize(c, sx, sy, cfactsize(c, sw, sf) + ((i - nmaster) < srest) - (2*c->bw), sh - (2*c->bw), 0);
 			sx += WIDTH(c) + iv;
 		}
 	}
@@ -193,8 +209,8 @@ centeredmaster(Monitor *m)
 	int mx = 0, my = 0, mh = 0, mw = 0;
 	int lx = 0, ly = 0, lw = 0, lh = 0;
 	int rx = 0, ry = 0, rw = 0, rh = 0;
-	int mfacts = 0, lfacts = 0, rfacts = 0;
-	int mf, lf, rf;
+	float mfacts = 0, lfacts = 0, rfacts = 0;
+	int mtotal = 0, ltotal = 0, rtotal = 0;
 	int mrest = 0, lrest = 0, rrest = 0;
 	Client *c;
 
@@ -232,27 +248,32 @@ centeredmaster(Monitor *m)
 		ry = m->wy + oh;
 	}
 
-	/* calculate facts: every client weighs 1 */
+	/* calculate facts */
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++) {
 		if (!nmaster || n < nmaster)
-			mfacts++;
+			mfacts += c->cfact;
 		else if ((n - nmaster) % 2)
-			lfacts++; /* total factor of left hand stack area */
+			lfacts += c->cfact; /* total factor of left hand stack area */
 		else
-			rfacts++; /* total factor of right hand stack area */
+			rfacts += c->cfact; /* total factor of right hand stack area */
 	}
 
-	mf = mfacts ? mh / mfacts : 0;
-	lf = lfacts ? lh / lfacts : 0;
-	rf = rfacts ? rh / rfacts : 0;
-	mrest = mh - mf * mfacts;
-	lrest = lh - lf * lfacts;
-	rrest = rh - rf * rfacts;
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++) {
+		if (!nmaster || n < nmaster)
+			mtotal += cfactsize(c, mh, mfacts);
+		else if ((n - nmaster) % 2)
+			ltotal += cfactsize(c, lh, lfacts);
+		else
+			rtotal += cfactsize(c, rh, rfacts);
+	}
+	mrest = mh - mtotal;
+	lrest = lh - ltotal;
+	rrest = rh - rtotal;
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++) {
 		if (!nmaster || i < nmaster) {
 			/* nmaster clients are stacked vertically, in the center of the screen */
-			resize(c, mx, my, mw - (2*c->bw), mf + (i < mrest) - (2*c->bw), 0);
+			resize(c, mx, my, mw - (2*c->bw), cfactsize(c, mh, mfacts) + (i < mrest) - (2*c->bw), 0);
 			my += HEIGHT(c) + ih;
 		} else {
 			/* stack clients are stacked vertically; the patch tests
@@ -261,10 +282,10 @@ centeredmaster(Monitor *m)
 			 * nmaster > 2, so the first rest clients of each side get one
 			 * pixel more here: (i - nmaster) / 2 is the index on its side */
 			if ((i - nmaster) % 2) {
-				resize(c, lx, ly, lw - (2*c->bw), lf + ((i - nmaster) / 2 < lrest) - (2*c->bw), 0);
+				resize(c, lx, ly, lw - (2*c->bw), cfactsize(c, lh, lfacts) + ((i - nmaster) / 2 < lrest) - (2*c->bw), 0);
 				ly += HEIGHT(c) + ih;
 			} else {
-				resize(c, rx, ry, rw - (2*c->bw), rf + ((i - nmaster) / 2 < rrest) - (2*c->bw), 0);
+				resize(c, rx, ry, rw - (2*c->bw), cfactsize(c, rh, rfacts) + ((i - nmaster) / 2 < rrest) - (2*c->bw), 0);
 				ry += HEIGHT(c) + ih;
 			}
 		}
@@ -276,7 +297,8 @@ centeredfloatingmaster(Monitor *m)
 {
 	int i, n, nmaster;
 	float mivf = 1.0; /* master inner vertical gap factor */
-	int oh, ov, ih, iv, mf, sf, mrest, srest;
+	int oh, ov, ih, iv, mrest, srest;
+	float mf, sf;
 	int mx = 0, my = 0, mh = 0, mw = 0;
 	int sx = 0, sy = 0, sh = 0, sw = 0;
 	Client *c;
@@ -315,11 +337,11 @@ centeredfloatingmaster(Monitor *m)
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		if (i < nmaster) {
 			/* nmaster clients are stacked horizontally, in the center of the screen */
-			resize(c, mx, my, mf + (i < mrest) - (2*c->bw), mh - (2*c->bw), 0);
+			resize(c, mx, my, cfactsize(c, mw, mf) + (i < mrest) - (2*c->bw), mh - (2*c->bw), 0);
 			mx += WIDTH(c) + iv*mivf;
 		} else {
 			/* stack clients are stacked horizontally */
-			resize(c, sx, sy, sf + ((i - nmaster) < srest) - (2*c->bw), sh - (2*c->bw), 0);
+			resize(c, sx, sy, cfactsize(c, sw, sf) + ((i - nmaster) < srest) - (2*c->bw), sh - (2*c->bw), 0);
 			sx += WIDTH(c) + iv;
 		}
 }
@@ -335,7 +357,8 @@ deck(Monitor *m)
 	int oh, ov, ih, iv;
 	int mx = 0, my = 0, mh = 0, mw = 0;
 	int sx = 0, sy = 0, sh = 0, sw = 0;
-	int mf, sf, mrest, srest;
+	float mf, sf;
+	int mrest, srest;
 	Client *c;
 
 	getgaps(m, &oh, &ov, &ih, &iv, &n);
@@ -364,7 +387,7 @@ deck(Monitor *m)
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		if (i < nmaster) {
-			resize(c, mx, my, mw - (2*c->bw), mf + (i < mrest) - (2*c->bw), 0);
+			resize(c, mx, my, mw - (2*c->bw), cfactsize(c, mh, mf) + (i < mrest) - (2*c->bw), 0);
 			my += HEIGHT(c) + ih;
 		} else {
 			resize(c, sx, sy, sw - (2*c->bw), sh - (2*c->bw), 0);
@@ -484,7 +507,8 @@ tile(Monitor *m)
 	int oh, ov, ih, iv;
 	int mx = 0, my = 0, mh = 0, mw = 0;
 	int sx = 0, sy = 0, sh = 0, sw = 0;
-	int mf, sf, mrest, srest;
+	float mf, sf;
+	int mrest, srest;
 	Client *c;
 
 	getgaps(m, &oh, &ov, &ih, &iv, &n);
@@ -508,10 +532,10 @@ tile(Monitor *m)
 
 	for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
 		if (i < nmaster) {
-			resize(c, mx, my, mw - (2*c->bw), mf + (i < mrest) - (2*c->bw), 0);
+			resize(c, mx, my, mw - (2*c->bw), cfactsize(c, mh, mf) + (i < mrest) - (2*c->bw), 0);
 			my += HEIGHT(c) + ih;
 		} else {
-			resize(c, sx, sy, sw - (2*c->bw), sf + ((i - nmaster) < srest) - (2*c->bw), 0);
+			resize(c, sx, sy, sw - (2*c->bw), cfactsize(c, sh, sf) + ((i - nmaster) < srest) - (2*c->bw), 0);
 			sy += HEIGHT(c) + ih;
 		}
 }

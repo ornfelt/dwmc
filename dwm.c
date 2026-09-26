@@ -106,6 +106,7 @@ typedef struct Client Client;
 struct Client {
 	char name[256];
 	float mina, maxa;
+	float cfact; /* weight in its area of the layout (cfacts), see setcfact() */
 	int x, y, w, h;
 	int sfx, sfy, sfw, sfh; /* stored float geometry, used on mode revert */
 	int oldx, oldy, oldw, oldh;
@@ -260,6 +261,7 @@ static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setsticky(Client *c, int sticky);
+static void setcfact(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
@@ -332,7 +334,7 @@ static void defaultgaps(const Arg *arg);
 static void dwindle(Monitor *m);
 static void fibonacci(Monitor *m, int s);
 static int ftoi(float f);
-static void getfacts(Monitor *m, int msize, int ssize, int *mf, int *sf, int *mr, int *sr);
+static void getfacts(Monitor *m, int msize, int ssize, float *mf, float *sf, int *mr, int *sr);
 static void getgaps(Monitor *m, int *oh, int *ov, int *ih, int *iv, int *nc);
 static void incrgaps(const Arg *arg);
 static void setgaps(int oh, int ov, int ih, int iv);
@@ -1510,6 +1512,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	c->cfact = 1.0;
 	c->mon = selmon;
 
 	updatetitle(c);
@@ -2191,6 +2194,27 @@ layoutmenu(const Arg *arg)
 	i = strtol(out, &end, 10);
 	if (end != out && i >= 0 && i < n)
 		setlayout(&((Arg) { .v = &layouts[i] }));
+}
+
+/* cfacts: change the focused client's weight in its area of the layout (its
+ * height in a column of tile, deck and centeredmaster, its width in bstack
+ * and centeredfloatingmaster) by arg->f, within 0.25..4.0; 0 sets it back
+ * to 1.0 */
+void
+setcfact(const Arg *arg)
+{
+	float f;
+	Client *c = selmon->sel;
+
+	if (!arg || !c || !selmon->lt[selmon->sellt]->arrange)
+		return;
+	f = arg->f + c->cfact;
+	if (arg->f == 0.0)
+		f = 1.0;
+	else if (f < 0.25 || f > 4.0)
+		return;
+	c->cfact = f;
+	arrange(selmon);
 }
 
 void
