@@ -138,6 +138,9 @@ static const char *autostart[] = { "sh", "-c", "killall -q dwmblocksc; dwmblocks
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *termcmd[]  = { TERMINAL, NULL };
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", "JetBrainsMono Nerd Font:size=11:style=bold", NULL };
+/* layoutmenu: prints the index of the chosen layout, takes layouts[]'s arrange
+ * functions in the same order */
+static const char *layoutmenucmd[] = { "/bin/sh", "-c", "~/.local/bin/my_scripts/layout_menu.sh spiral tile bstack dwindle deck monocle centeredmaster centeredfloatingmaster floating", NULL };
 
 /*
  * Xresources preferences to load at startup; the same resource may set
@@ -219,6 +222,8 @@ static const Key keys[] = {
         { MODKEY|MODKEY1,           XK_p,               setlayout,          {.v = &layouts[7]} },
         /* bind mod-ctrl-aring: setlayout floating */
         { MODKEY|ControlMask,       XK_aring,           setlayout,          {.v = &layouts[8]} },
+        /* bind mod-r: layoutmenu (pick a layout from layout_menu.sh) */
+        { MODKEY,                   XK_r,               layoutmenu,         {.v = layoutmenucmd} },
         /* bind mod-f: togglefullscr */
         { MODKEY,                   XK_f,               togglefullscr,      {0} },
         /* bind mod-space: togglefloating */
@@ -408,6 +413,12 @@ static const Key keys[] = {
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkClientWin, or ClkRootWin */
 static const Button buttons[] = {
     /* click                event mask      button          function        argument */
+    /* bind ltsymbol-button1: layoutmenu (pick a layout from layout_menu.sh) */
+    { ClkLtSymbol,          0,              Button1,        layoutmenu,     {.v = layoutmenucmd} },
+    /* bind ltsymbol-button4: cyclelayout +1 (scroll up) */
+    { ClkLtSymbol,          0,              Button4,        cyclelayout,    {.i = +1} },
+    /* bind ltsymbol-button5: cyclelayout -1 (scroll down) */
+    { ClkLtSymbol,          0,              Button5,        cyclelayout,    {.i = -1} },
     /* bind statustext-button1: sigstatusbar 1 */
     { ClkStatusText,        0,              Button1,        sigstatusbar,   {.i = 1} },
     /* bind statustext-button2: sigstatusbar 2 */

@@ -205,6 +205,7 @@ static void configure(Client *c);
 static void configurenotify(XEvent *e);
 static void configurerequest(XEvent *e);
 static Monitor *createmon(void);
+static void cyclelayout(const Arg *arg);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void detachstack(Client *c);
@@ -229,6 +230,7 @@ static void grabkeys(void);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
+static void layoutmenu(const Arg *arg);
 static void load_xresources(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -2087,6 +2089,77 @@ setsticky(Client *c, int sticky)
 		updatenetwmstate(c);
 		arrange(c->mon);
 	}
+}
+
+/* Set the layout arg->i places after the current one in layouts[],
+ * wrapping around (dwm's cyclelayouts patch). */
+void
+cyclelayout(const Arg *arg)
+{
+	int n = LENGTH(layouts), i;
+
+	for (i = 0; i < n && &layouts[i] != selmon->lt[selmon->sellt]; i++);
+	if (i == n) /* not one of layouts[]: from the first */
+		i = 0;
+	setlayout(&((Arg) { .v = &layouts[((i + arg->i) % n + n) % n] }));
+}
+
+/* Run the command arg->v, which prints the index in layouts[] of the
+ * layout to set, with the current one's index in LAYOUT_MENU_CURRENT
+ * (dwm's layoutmenu patch). dwmc waits for it to exit, like for a menu. */
+void
+layoutmenu(const Arg *arg)
+{
+	char *const *argv = (char *const *)arg->v;
+	char out[32], buf[256], cur[16], *end = out;
+	struct sigaction sa;
+	int fd[2], n = LENGTH(layouts), i;
+	size_t len = 0;
+	ssize_t r;
+	pid_t pid;
+
+	if (!argv || !argv[0] || pipe(fd) < 0)
+		return;
+	for (i = 0; i < n && &layouts[i] != selmon->lt[selmon->sellt]; i++);
+	snprintf(cur, sizeof cur, "%d", i == n ? 0 : i);
+	if ((pid = fork()) == 0) {
+		if (dpy)
+			close(ConnectionNumber(dpy));
+		close(fd[0]);
+		if (fd[1] != STDOUT_FILENO) {
+			dup2(fd[1], STDOUT_FILENO);
+			close(fd[1]);
+		}
+		/* the command must not inherit dwmc's ignored SIGCHLD */
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sa.sa_handler = SIG_DFL;
+		sigaction(SIGCHLD, &sa, NULL);
+		setenv("LAYOUT_MENU_CURRENT", cur, 1);
+		execvp(argv[0], argv);
+		die("dwmc: execvp '%s' failed:", argv[0]);
+	}
+	close(fd[1]);
+	/* read all of it, keep the start */
+	while (pid > 0 && (r = read(fd[0], buf, sizeof buf)) != 0) {
+		if (r < 0) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+		if ((size_t)r > sizeof out - 1 - len)
+			r = sizeof out - 1 - len;
+		memcpy(out + len, buf, r);
+		len += r;
+	}
+	close(fd[0]);
+	/* SIGCHLD is ignored: this waits for the exit, then fails with ECHILD */
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
+	out[len] = '\0';
+	i = strtol(out, &end, 10);
+	if (end != out && i >= 0 && i < n)
+		setlayout(&((Arg) { .v = &layouts[i] }));
 }
 
 void
