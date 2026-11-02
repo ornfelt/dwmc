@@ -7,7 +7,7 @@ argument-hint: "[empty means every remaining commit within the run budget, or: s
 
 # Sync dwm commits into dwmc
 
-dwmc (`~/Code2/C/dwmc`, branch `master`, remote `origin` = `https://github.com/ornfelt/dwmc`) is
+dwmc (`~/Code2/C/dwmc`, branch `main`, remote `origin` = `https://github.com/ornfelt/dwmc`) is
 the C port of dwmr, which is itself the Rust port of the user's patched dwm. The **source** of this
 sync is that dwm, and dwmr is the **specification** dwmc follows:
 
@@ -71,8 +71,8 @@ git -C ~/Code2/Rust/dwmr status --short                     # report if dirty; r
 ```
 
 Only **committed** history counts, in both `~/.config/dwm` (local `master`) and dwmr (local
-`master`). dwmr's ledger is read from its commit: `git -C ~/Code2/Rust/dwmr show
-master:UPSTREAM_SYNC.md`. If dwmr has no ledger yet, every row here waits on dwmr: say so and
+`main`). dwmr's ledger is read from its commit: `git -C ~/Code2/Rust/dwmr show
+main:UPSTREAM_SYNC.md`. If dwmr has no ledger yet, every row here waits on dwmr: say so and
 suggest running `/dwmr-upstream-sync` in `~/Code2/Rust/dwmr` first.
 
 ## 2. The baseline
@@ -167,7 +167,7 @@ Rules for the ledger:
 - The `Notes` column says which dwmc functions changed, what was translated differently from the
   dwmr commit and why, what went into `config.def.h`, `config/config.h` and the user's config,
   and `flagged` when the row has an entry under "Flagged".
-- If the ledger disagrees with dwmc's `master`, **the tree wins** and the rows concerned are
+- If the ledger disagrees with dwmc's `main`, **the tree wins** and the rows concerned are
   rebuilt per "Picking up the current state" in the same run.
 
 ### upstream_info.txt
@@ -187,7 +187,7 @@ of dwmr's.
 
 For each dwm commit after the baseline, in ledger order:
 
-1. **An earlier sync**: `git log --format='%h %s' --grep="^dwm-commit: <full sha>" master` finds
+1. **An earlier sync**: `git log --format='%h %s' --grep="^dwm-commit: <full sha>" main` finds
    the dwmc commit that carries it (fall back to the subject with the name swaps of section 5).
    Found: `ported`, `adapted` or `partial` as dwmr's row (or as the dwmc diff shows), naming it.
 2. **dwmr's row**: copy origin, kind and the `dwmr` column from dwmr's ledger. A dwmr skip whose
@@ -327,7 +327,7 @@ No attribution trailer.
 
 ### Replay
 
-`replay <dwm-commit>` never rewrites a commit already in `master`. For a ported commit, the
+`replay <dwm-commit>` never rewrites a commit already in `main`. For a ported commit, the
 correction - the rest of a `partial` port, a wrong translation, catching up with a dwmr replay
 (a dwmr follow-up commit carrying the same `dwm-commit:` trailer) - is a new dwmc commit on top,
 named after the dwmr follow-up when there is one, or for what it does
@@ -336,7 +336,7 @@ named after the dwmr follow-up when there is one, or for what it does
 place. For a commit not ported yet (`asked`, `skipped`), replay ports it per this section.
 
 To find dwmr follow-ups dwmc has not caught up with:
-`git -C ~/Code2/Rust/dwmr log --format='%h %s' --grep='^dwm-commit: ' master` lists every dwmr
+`git -C ~/Code2/Rust/dwmr log --format='%h %s' --grep='^dwm-commit: ' main` lists every dwmr
 sync commit; one whose sha is not in any dwmc `dwmr-commit:` trailer is missing here.
 
 ## How much per run
