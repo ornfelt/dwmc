@@ -300,6 +300,7 @@ static void togglefullscr(const Arg *arg);
 static void togglescratch(const Arg *arg);
 static void togglesticky(const Arg *arg);
 static void toggletag(const Arg *arg);
+static void toggletitle(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
@@ -700,7 +701,7 @@ buttonpress(XEvent *e)
 			}
 			drw_setfontset(drw, normalfont);
 		}
-		/* notitle: the space between the layout symbol and the status is
+		/* the space between the layout symbol and the status (the title) is
 		 * no click target; click stays ClkRootWin */
 	} else if ((c = wintoclient(ev->window))) {
 		if (focusonwheel || (ev->button != Button4 && ev->button != Button5))
@@ -1061,9 +1062,11 @@ drawbar(Monitor *m)
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
 	if ((w = m->ww - tw - x) > bh) {
-		/* notitle: no window title, just clear the rest of the bar */
 		drw_setscheme(drw, scheme[SchemeNorm]);
-		drw_rect(drw, x, 0, w, bh, 1, 1);
+		if (showtitle && m->sel)
+			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+		else
+			drw_rect(drw, x, 0, w, bh, 1, 1);
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
@@ -1790,8 +1793,11 @@ propertynotify(XEvent *e)
 			drawbars();
 			break;
 		}
-		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName])
-			updatetitle(c); /* notitle: the bar does not show it */
+		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
+			updatetitle(c);
+			if (showtitle && c == c->mon->sel)
+				drawbar(c->mon);
+		}
 		if (ev->atom == netatom[NetWMWindowType])
 			updatewindowtype(c);
 	}
@@ -2892,6 +2898,13 @@ toggletag(const Arg *arg)
 		focus(NULL);
 		arrange(selmon);
 	}
+}
+
+void
+toggletitle(const Arg *arg)
+{
+	showtitle = !showtitle;
+	drawbars();
 }
 
 void

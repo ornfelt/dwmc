@@ -12,6 +12,7 @@ static int browsergaps              = 0;        /* 0 means no outer gap when the
 static unsigned int snap            = 32;       /* snap pixel */
 static int swallowfloating          = 0;        /* 1 means swallow floating windows by default */
 static int showbar                  = 1;        /* 0 means no bar */
+static int showtitle                = 1;        /* 0 means no window title in the bar */
 static int topbar                   = 1;        /* 0 means bottom bar */
 static const int focusonwheel       = 0;        /* 0 allows the user to scroll window without changing focus */
 static const char *fonts[]          = { "monospace:size=10" };
@@ -203,6 +204,7 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_Right,  tagmon,         {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_p,      togglebars,     {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_p,      togglebar,      {0} },
+	{ MODKEY|ControlMask,           XK_w,      toggletitle,    {0} },
 	{ MODKEY,                       XK_apostrophe, togglescratch, {.ui = 0 } },
 	{ MODKEY|ShiftMask,             XK_apostrophe, togglescratch, {.ui = 1 } },
 	TAGKEYS(                        XK_1,                      0)
