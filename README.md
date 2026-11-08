@@ -89,7 +89,7 @@ A few notes on the configuration:
   tagview, focusmon, focusnthmon, tagmon, tagmonview, tagnthmonview,
   togglebars, toggleview, toggletag, shifttag, shiftview, shiftviewclients,
   defaultgaps, incrgaps, togglegaps, togglebgaps, sigstatusbar, quit,
-  toggletitle, movemouse, resizemouse.
+  toggletitle, toggleshorttitle, movemouse, resizemouse.
   Layouts: spiral, tile, bstack, dwindle, deck, monocle, centeredmaster,
   centeredfloatingmaster, and `NULL` for floating.
 - `tagmonview` sends the focused window to the previous/next monitor like
@@ -173,6 +173,14 @@ A few notes on the configuration:
   `showtitle = 0` leaves it out and `toggletitle` (Mod-Control-w) switches it
   at runtime. The title has no click area (dwm's notitle patch); there is no
   `ClkWinTitle`.
+- With `shorttitle = 1` (the default) a title longer than
+  `titlehead + titletail + 18` characters is shortened to its start, " … " and
+  its end. The start is cut at the space closest to `titlehead` (60)
+  characters, within -5..+10; the end starts at an app name separator
+  (" - ", " – ", " — ", " | ") or else at the space closest to `titletail` (20)
+  characters from the end, within -5..+5. With no space in range a part is cut
+  at exactly that many characters. `toggleshorttitle` (Mod-Control-Shift-w)
+  switches it at runtime.
 - Only selected or occupied tags are drawn, without the small occupancy
   squares (dwm's hide_vacant_tags patch). A window on every tag does not
   count as occupying them. Clicks on the tag bar follow the same layout.

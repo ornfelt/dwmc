@@ -300,6 +300,7 @@ static void togglefullscr(const Arg *arg);
 static void togglescratch(const Arg *arg);
 static void togglesticky(const Arg *arg);
 static void toggletag(const Arg *arg);
+static void toggleshorttitle(const Arg *arg);
 static void toggletitle(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -414,10 +415,12 @@ struct NumLayouts { char nolayouts[LENGTH(layouts) < 1 ? -1 : 1]; };
 static unsigned int taglayouts[LENGTH(tags)];
 /* "colors must define the SchemeNorm and SchemeSel schemes" */
 struct NumColors { char noschemes[LENGTH(colors) < 2 ? -1 : 1]; };
-/* The scalars dwmr checks (gaps at most GAP_MAX, refreshrate at least 1) are
- * variables here, not constant expressions, so they are checked where they
- * are used: createmon() and setgaps() clamp the gaps, movemouse() and
- * resizemouse() the refresh rate; togglescratch() checks its index. */
+/* The scalars dwmr checks (gaps at most GAP_MAX, refreshrate at least 1,
+ * titlehead and titletail 1..255) are variables here, not constant
+ * expressions, so they are checked where they are used: createmon() and
+ * setgaps() clamp the gaps, movemouse() and resizemouse() the refresh rate;
+ * togglescratch() checks its index; shortentitle() leaves the title as it is
+ * for title lengths out of range. */
 
 /* vanitygaps.c, which the patch #includes from config.h */
 #include "vanitygaps.c"
@@ -1032,6 +1035,7 @@ void
 drawbar(Monitor *m)
 {
 	int x, w, tw = 0;
+	char title[264]; /* the selected name shortened, at most a byte longer */
 	unsigned int i, occ = 0, urg = 0;
 	Client *c;
 
@@ -1064,7 +1068,9 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - x) > bh) {
 		drw_setscheme(drw, scheme[SchemeNorm]);
 		if (showtitle && m->sel)
-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+			drw_text(drw, x, 0, w, bh, lrpad / 2, shorttitle
+				&& shortentitle(title, m->sel->name, sizeof title, titlehead, titletail)
+				? title : m->sel->name, 0);
 		else
 			drw_rect(drw, x, 0, w, bh, 1, 1);
 	}
@@ -2898,6 +2904,13 @@ toggletag(const Arg *arg)
 		focus(NULL);
 		arrange(selmon);
 	}
+}
+
+void
+toggleshorttitle(const Arg *arg)
+{
+	shorttitle = !shorttitle;
+	drawbars();
 }
 
 void

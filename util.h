@@ -9,3 +9,4 @@
 void die(const char *fmt, ...) __attribute__((noreturn));
 void *ecalloc(size_t nmemb, size_t size);
 void truncate_utf8(char *dst, const char *src, size_t size);
+int shortentitle(char *dst, const char *src, size_t size, unsigned int head, unsigned int tail);

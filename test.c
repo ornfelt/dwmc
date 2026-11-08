@@ -59,10 +59,41 @@ utf8decode_invalid(void)
 	 * decodes at the terminating NUL) */
 }
 
+static void
+shortentitle_cuts_at_words(void)
+{
+	char buf[264], src[300];
+	int i;
+
+	assert(shortentitle(buf, "diegoMalagrida/pocket-dots: My Arch Linux dotfiles, ready to install on a fresh system. - Mozilla Firefox", sizeof buf, 60, 20));
+	assert(!strcmp(buf, "diegoMalagrida/pocket-dots: My Arch Linux dotfiles, ready to … - Mozilla Firefox"));
+	/* the separator wins over the space closer to tail ("baz — Mozilla Firefox") */
+	assert(shortentitle(buf, "Some very long page title that keeps going and going for a good while, foo bar baz — Mozilla Firefox", sizeof buf, 60, 20));
+	assert(!strcmp(buf, "Some very long page title that keeps going and going for a … — Mozilla Firefox"));
+	/* up to head + tail + 18 characters are shown as they are */
+	memset(src, 'a', 50);
+	src[50] = ' ';
+	memset(src + 51, 'b', 47);
+	src[98] = '\0';
+	assert(!shortentitle(buf, src, sizeof buf, 60, 20));
+	src[98] = 'b';
+	src[99] = '\0';
+	assert(shortentitle(buf, src, sizeof buf, 60, 20));
+	/* no space in range: exactly head / tail characters, not bytes */
+	for (i = 0; i < 120; i++)
+		memcpy(src + 2 * i, "é", 2);
+	src[240] = '\0';
+	assert(shortentitle(buf, src, sizeof buf, 60, 20));
+	assert(!strncmp(buf, src, 120) && !strcmp(buf + 120, " … éééééééééééééééééééé"));
+	assert(!shortentitle(buf, "diegoMalagrida/pocket-dots: My Arch Linux dotfiles, ready to install on a fresh system. - Mozilla Firefox", sizeof buf, 0, 20));
+	assert(!shortentitle(buf, "diegoMalagrida/pocket-dots: My Arch Linux dotfiles, ready to install on a fresh system. - Mozilla Firefox", sizeof buf, 60, 256));
+}
+
 int
 main(void)
 {
 	truncate_keeps_char_boundaries();
+	shortentitle_cuts_at_words();
 	between_is_inclusive();
 	utf8decode_ascii_and_multibyte();
 	utf8decode_invalid();

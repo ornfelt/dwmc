@@ -13,6 +13,9 @@ static unsigned int snap            = 32;       /* snap pixel */
 static int swallowfloating          = 0;        /* 1 means swallow floating windows by default */
 static int showbar                  = 1;        /* 0 means no bar */
 static int showtitle                = 1;        /* 0 means no window title in the bar */
+static int shorttitle               = 1;        /* 1 means shorten titles longer than titlehead + titletail + 18 characters */
+static unsigned int titlehead       = 60;       /* a shortened title's start, in characters (cut at a space within -5..+10) */
+static unsigned int titletail       = 20;       /* its end, in characters (cut at a space within -5..+5) */
 static int topbar                   = 1;        /* 0 means bottom bar */
 static const int focusonwheel       = 0;        /* 0 allows the user to scroll window without changing focus */
 static const char *fonts[]          = { "monospace:size=10" };
@@ -205,6 +208,7 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_p,      togglebars,     {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_p,      togglebar,      {0} },
 	{ MODKEY|ControlMask,           XK_w,      toggletitle,    {0} },
+	{ MODKEY|ControlMask|ShiftMask, XK_w,      toggleshorttitle, {0} },
 	{ MODKEY,                       XK_apostrophe, togglescratch, {.ui = 0 } },
 	{ MODKEY|ShiftMask,             XK_apostrophe, togglescratch, {.ui = 1 } },
 	TAGKEYS(                        XK_1,                      0)
